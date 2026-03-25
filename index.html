@@ -16,14 +16,20 @@
 ```
     /* ── CHAT WIDGET ── */
     #chat-widget {
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        z-index: 1000;
+        position: fixed !important;
+        bottom: 24px !important;
+        right: 24px !important;
+        left: auto !important;
+        z-index: 9999 !important;
         display: flex;
         flex-direction: column;
         align-items: flex-end;
         gap: 12px;
+        pointer-events: none;
+    }
+
+    #chat-widget > * {
+        pointer-events: all;
     }
 
     #chat-window {
