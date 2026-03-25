@@ -13,12 +13,17 @@ export default async function handler(req, res) {
                 'x-api-key': process.env.ANTHROPIC_API_KEY,
                 'anthropic-version': '2023-06-01'
             },
+
+
             body: JSON.stringify({
-                model: "claude-3-haiku-20240307", // Must be this exact string
+                model: "claude-3-haiku-20240307",
                 max_tokens: 1024,
-                system: system,
-                messages: messages
+                system: system || "You are a helpful assistant.",
+                // Safety filter: removes anything that isn't a valid object with content
+                messages: messages.filter(m => m.role && m.content && m.content.trim() !== "")
             })
+
+            
         });
 
         const data = await response.json();
