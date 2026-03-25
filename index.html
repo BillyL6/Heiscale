@@ -255,15 +255,67 @@
     document.getElementById('chat-close').onclick = () => toggleChat(false);
     document.getElementById('open-chat-btn').onclick = () => toggleChat(true);
 
+    
+
     function addBotMessage(text) {
-        messages.push({ role: 'assistant', content: text });
+        // Do NOT push the opening message to the formal 'messages' array 
+        // if it's the very first message. Anthropic requires User to be first.
+        if (messages.length > 0) {
+            messages.push({ role: 'assistant', content: text });
+        }
         renderMessage(text, 'bot');
-        // Trigger lead form after 2nd assistant message
+        
         if (messages.filter(m => m.role === 'assistant').length === 2 && !leadCaptured) {
             setTimeout(showLeadForm, 800);
         }
     }
 
+    async function sendMessage() {
+        const text = chatInput.value.trim();
+        if (!text || isTyping) return;
+
+        chatInput.value = '';
+        
+        // 1. Add User message to the array (This makes 'user' first)
+        messages.push({ role: 'user', content: text });
+        renderMessage(text, 'user');
+        
+        isTyping = true;
+        showTyping(true);
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    system: SYSTEM_PROMPT,
+                    // 2. Ensure we only send valid roles
+                    messages: messages.map(m => ({ role: m.role, content: m.content }))
+                })
+            });
+            
+            const data = await response.json();
+            showTyping(false);
+
+            if (data.content && data.content[0]) {
+                addBotMessage(data.content[0].text);
+            } else {
+                // If there's an error, log the specific reason from the API
+                console.error("API Error Detail:", data);
+                renderMessage("I'm having trouble thinking. Please try again.", 'bot');
+            }
+        } catch (e) {
+            showTyping(false);
+            renderMessage("Connection error. Please check your internet.", 'bot');
+        }
+        isTyping = false;
+    }
+
+
+
+
+
+    
     function renderMessage(text, type) {
         const el = document.createElement('div');
         el.className = `msg msg-${type}`;
@@ -289,39 +341,7 @@
         }
     }
 
-    async function sendMessage() {
-        const text = chatInput.value.trim();
-        if (!text || isTyping) return;
-
-        chatInput.value = '';
-        messages.push({ role: 'user', content: text });
-        renderMessage(text, 'user');
-        
-        isTyping = true;
-        showTyping(true);
-
-        try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    system: SYSTEM_PROMPT,
-                    messages: messages.map(m => ({ role: m.role, content: m.content }))
-                })
-            });
-            const data = await response.json();
-            showTyping(false);
-            if (data.content && data.content[0]) {
-                addBotMessage(data.content[0].text);
-            } else {
-                renderMessage("Sorry, I'm having trouble connecting. Please try again later.", 'bot');
-            }
-        } catch (e) {
-            showTyping(false);
-            renderMessage("Connection error. Please check your internet.", 'bot');
-        }
-        isTyping = false;
-    }
+    
 
     chatSend.onclick = sendMessage;
     chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
