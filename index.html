@@ -500,48 +500,49 @@ STRICT RULES:
     }
   
     // ── SEND MESSAGE ──
-    async function sendMessage() {
-        const text = chatInput.value.trim();
-        if (!text || isTyping) return;
-  
-        chatInput.value = '';
-        addUserMessage(text);
-        isTyping = true;
-        chatSend.disabled = true;
-        showTyping();
-  
-        try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: 'claude-haiku-4-5-20251001',
-                    max_tokens: 300,
-                    system: SYSTEM_PROMPT,
-                    messages: messages.filter(m => m.role === 'user' || m.role === 'assistant')
-                })
-            });
-  
-            const data = await response.json();
-            console.log('API response:', JSON.stringify(data));
-            hideTyping();
-  
-            if (data.content && data.content[0]) {
-                addBotMessage(data.content[0].text);
-            } else {
-                addBotMessage("I'm having a moment — please try again or email hei@heiscale.com directly.");
-            }
-        } catch (err) {
-            hideTyping();
-            addBotMessage("Connection issue. Please try again or reach out to hei@heiscale.com directly.");
+async function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text || isTyping) return;
+
+    chatInput.value = '';
+    addUserMessage(text);
+    isTyping = true;
+    chatSend.disabled = true;
+    showTyping();
+
+    try {
+        // Points to your local server or deployed backend
+        const response = await fetch('/api/chat', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                system: SYSTEM_PROMPT,
+                // Only send the text content to the backend
+                messages: messages.map(m => ({ role: m.role, content: m.content }))
+            })
+        });
+
+        const data = await response.json();
+        hideTyping();
+
+        // Extracting text correctly from the API response structure
+        if (data.content && data.content[0]) {
+            addBotMessage(data.content[0].text);
+        } else {
+            addBotMessage("I'm having a moment — please try again or email hei@heiscale.com.");
         }
-  
-        isTyping = false;
-        chatSend.disabled = false;
-        chatInput.focus();
+    } catch (err) {
+        hideTyping();
+        addBotMessage("Connection issue. Please ensure the backend server is running.");
     }
+
+    isTyping = false;
+    chatSend.disabled = false;
+    chatInput.focus();
+}
+
+
+    
   
     chatSend.addEventListener('click', sendMessage);
     chatInput.addEventListener('keypress', (e) => {
