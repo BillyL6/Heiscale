@@ -14,7 +14,7 @@ export default async function handler(req, res) {
                 'anthropic-version': '2023-06-01'
             },
             body: JSON.stringify({
-                model: "claude-3-haiku-20240307", // Use a valid model ID
+                model: "claude-3-haiku-20240307", // Must be this exact string
                 max_tokens: 1024,
                 system: system,
                 messages: messages
@@ -24,13 +24,14 @@ export default async function handler(req, res) {
         const data = await response.json();
 
         if (!response.ok) {
-            console.error('Anthropic Error:', data);
+            // This will help us see the SPECIFIC error in Vercel logs
+            console.error('Anthropic Error Details:', JSON.stringify(data));
             return res.status(response.status).json(data);
         }
 
         res.status(200).json(data);
     } catch (error) {
-        console.error('Server Error:', error);
+        console.error('Server Crash:', error);
         res.status(500).json({ error: 'API request failed' });
     }
 }
