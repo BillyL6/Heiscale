@@ -1,6 +1,8 @@
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send();
 
+    const GOOGLE_SHEET_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';
+
     // 1. GENERATE TIMESTAMP (Australia/Sydney Time)
     const now = new Date();
     const timestamp = now.toLocaleString('en-AU', { 
@@ -10,10 +12,10 @@ export default async function handler(req, res) {
     });
 
     // 2. GET GEO DATA FROM VERCEL
-    const lat = req.headers['x-vercel-ip-latitude'];
-    const lon = req.headers['x-vercel-ip-longitude'];
     const city = decodeURIComponent(req.headers['x-vercel-ip-city'] || 'Unknown');
     const country = req.headers['x-vercel-ip-country'] || 'Unknown';
+    const lat = req.headers['x-vercel-ip-latitude'];
+    const lon = req.headers['x-vercel-ip-longitude'];
 
     // 3. REVERSE GEOCODE TO GET SUBURB
     let suburb = "";
@@ -23,22 +25,15 @@ export default async function handler(req, res) {
                 headers: { 'User-Agent': 'HEIScale-System-Architect/1.0' }
             });
             const geoData = await geoRes.json();
-            const address = geoData.address || {};
-            suburb = address.suburb || address.neighbourhood || address.town || address.village || "";
-        } catch (e) {
-            console.error("Geocoding Error:", e.message);
-        }
+            suburb = geoData.address?.suburb || geoData.address?.neighbourhood || geoData.address?.town || "";
+        } catch (e) { console.error("Geo Error"); }
     }
 
     const locationDisplay = suburb && suburb.toLowerCase() !== city.toLowerCase() 
         ? `${city} - ${suburb}` 
         : city;
 
-    // 4. LOG THE VISITOR
-    console.log(`[${timestamp}] VISITOR: ${locationDisplay} | Country: ${country}`);
-
-
-    // 5. THE HEISCALE PERSONA (Updated to stop Markdown symbols)
+    // 4. THE HEISCALE PERSONA (Clean & Concise)
     const HEISCALE_PERSONA = `
         You are Hei's Assistant, the AI representative for HEIScale.
         
@@ -73,27 +68,25 @@ export default async function handler(req, res) {
         The visitor is currently in ${locationDisplay}, ${country}. Use this naturally if they ask about local expertise.
     `;
 
-// Inside your api/chat.js handler
-const leadData = {
-    timestamp: timestamp,
-    location: locationDisplay,
-    name: req.body.name,
-    email: req.body.email,
-    message: messages[messages.length - 1].content
-};
-
-// PUSH TO GOOGLE SHEETS
-fetch('https://script.google.com/macros/s/AKfycbxpMnzOpIh4K-oG3da7EdWmSJ1WSm7exASe-TmPZH3F5Tq2uCsuUQKnpCqNVEf2CQ/exec', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(leadData)
-}).catch(err => console.error("Sheet Sync Error:", err));
-
-
-    
     try {
-        const { messages } = req.body; // No longer taking 'system' from frontend to prevent prompt injection
+        const { messages, name, email } = req.body;
+        const lastUserMessage = messages[messages.length - 1].content;
 
+        // 5. ASYNC LOG TO GOOGLE SHEETS
+        // We don't 'await' this so the chat stays fast
+        fetch('https://script.google.com/macros/s/AKfycbxpMnzOpIh4K-oG3da7EdWmSJ1WSm7exASe-TmPZH3F5Tq2uCsuUQKnpCqNVEf2CQ/exec', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                timestamp,
+                location: `${locationDisplay} (${country})`,
+                name: name || "Anonymous",
+                email: email || "No Email Provided",
+                message: lastUserMessage
+            })
+        }).catch(err => console.error("Sheet Sync Error:", err));
+
+        // 6. TALK TO CLAUDE
         const response = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
             headers: {
@@ -110,12 +103,11 @@ fetch('https://script.google.com/macros/s/AKfycbxpMnzOpIh4K-oG3da7EdWmSJ1WSm7exA
         });
 
         const data = await response.json();
-        if (!response.ok) {
-            console.error('Anthropic Error:', JSON.stringify(data));
-            return res.status(response.status).json(data);
-        }
         res.status(200).json(data);
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 }
+
+
