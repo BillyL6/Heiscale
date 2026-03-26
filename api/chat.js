@@ -51,7 +51,7 @@ export default async function handler(req, res) {
         3. DO NOT use em-dash (—)
         4. Use plain English like a human expert texting.
         5. If you need to emphasize something, use CAPITAL LETTERS.
-        6. Use half line break size line space to separate ideas.
+        6. Use simple line break to separate ideas.
         7. NO CHUNKY PARAGRAPHS. Max 2 sentences before a line break.
         8. DO NOT be overly formal. Be direct.
         9. Ask for name and email after 2nd question politely.
