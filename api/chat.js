@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send();
 
-    const GOOGLE_SHEET_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';
+    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzwMWiUawQjuPxUoUungazc-Xl90y7MPE4thpqw8WQkrbUjihpBdY6zoV09ybNWDNgjNw/exec';
 
     // 1. GENERATE TIMESTAMP (Australia/Sydney Time)
     const now = new Date();
@@ -17,23 +17,21 @@ export default async function handler(req, res) {
     const lat = req.headers['x-vercel-ip-latitude'];
     const lon = req.headers['x-vercel-ip-longitude'];
 
-    // 3. REVERSE GEOCODE TO GET SUBURB
-    let suburb = "";
+    // 3. REVERSE GEOCODE TO GET SUBURB (Enhanced Fallback)
+    let locationDisplay = city;
     if (lat && lon) {
         try {
             const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`, {
                 headers: { 'User-Agent': 'HEIScale-System-Architect/1.0' }
             });
             const geoData = await geoRes.json();
-            suburb = geoData.address?.suburb || geoData.address?.neighbourhood || geoData.address?.town || "";
+            const addr = geoData.address || {};
+            const suburb = addr.suburb || addr.neighbourhood || addr.city_district || addr.town || "";
+            if (suburb) locationDisplay = `${city} - ${suburb}`;
         } catch (e) { console.error("Geo Error"); }
     }
 
-    const locationDisplay = suburb && suburb.toLowerCase() !== city.toLowerCase() 
-        ? `${city} - ${suburb}` 
-        : city;
-
-    // 4. THE HEISCALE PERSONA (Clean & Concise)
+    // 4. THE FULL HEISCALE PERSONA
     const HEISCALE_PERSONA = `
         You are Hei's Assistant, the AI representative for HEIScale.
         
@@ -43,62 +41,29 @@ export default async function handler(req, res) {
         - 20 years of experience in high-velocity logistics.
         
         YOUR CORE MISSION:
-        - Explain how we fix messy supply chains.
+        - Explain how we fix messy supply chains using the H-E-I Framework (Harmonize, Emerging, Innovation).
         - Tone: Professional, authoritative, yet uses "Plain English." No corporate fluff.     
-        - Follow up with deep dive questions to understand the problems, then playback the understanding during the conversation.
+        - Follow up with deep dive questions to understand the specific business challenges.
         
         STRICT FORMATTING RULES:
         1. DO NOT use double asterisks (**) for bolding.
-        2. DO NOT use dashes (-) for bullet points.
-        3. BE CONCISE. Use "plain English" like a human expert texting.
+        2. DO NOT use dashes (-)
+        3. Use plain English like a human expert texting.
         4. If you need to emphasize something, use CAPITAL LETTERS.
         5. Use simple line breaks to separate ideas.
-        6. Keep responses concise and readable for a mobile chat window.
-        7. NO CHUNKY PARAGRAPHS. Never write more than 2 sentences before a line break.
-        8. If you have multiple points, use a new line for each instead of a list.
-        9. DO NOT be overly formal. Be direct.
+        6. NO CHUNKY PARAGRAPHS. Max 2 sentences before a line break.
+        7. DO NOT be overly formal. Be direct.
 
-        EXAMPLE STYLE:
-        Slow picking usually happens because of travel time.
-        Pickers are likely zigzagging because the warehouse path isn't optimized.
-        It could also be "bad slotting" where fast movers are buried in the back.
-        What does it look like on your floor right now? Are they walking long distances?
-        
         CONTEXT:
-        The visitor is currently in ${locationDisplay}, ${country}. Use this naturally if they ask about local expertise.
+        The visitor is in ${locationDisplay}, ${country}. Use this naturally if relevant.
     `;
 
     try {
         const { messages, name, email } = req.body;
         const lastUserMessage = messages[messages.length - 1].content;
 
-        // 5. ASYNC LOG TO GOOGLE SHEETS
-
-// 1. Get the reply from Claude
-const aiReply = data.content?.[0]?.text || "No response received";
-
-// 2. The "Handshake" to Google
-// This sends the data to the URL you just gave me
-fetch('https://script.google.com/macros/s/AKfycbzwMWiUawQjuPxUoUungazc-Xl90y7MPE4thpqw8WQkrbUjihpBdY6zoV09ybNWDNgjNw/exec', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-        timestamp: timestamp,
-        location: `${locationDisplay} (${country})`,
-        name: name || "Anonymous",      // Matches data.name in Script
-        email: email || "No Email",     // Matches data.email in Script
-        message: lastUserMessage,       // Matches data.message in Script
-        ai_response: aiReply            // Matches data.ai_response in Script
-    })
-}).catch(err => console.error("Sheet Sync Error:", err));
-
-// 3. Return the response to the website
-res.status(200).json(data);
-
-
-        
-        // 6. TALK TO CLAUDE
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
+        // 5. TALK TO CLAUDE FIRST
+        const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -106,19 +71,34 @@ res.status(200).json(data);
                 'anthropic-version': '2023-06-01'
             },
             body: JSON.stringify({
-                model: "claude-sonnet-4-6",
+                model: "claude-sonnet-4-6", 
                 max_tokens: 1024,
                 system: HEISCALE_PERSONA,
                 messages: messages
             })
         });
 
-        const data = await response.json();
+        const data = await aiResponse.json();
+        const aiReply = data.content?.[0]?.text || "No response content";
+
+        // 6. LOG FULL PACKAGE TO GOOGLE SHEETS
+        fetch(GOOGLE_SHEET_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                timestamp: timestamp,
+                location: `${locationDisplay} (${country})`,
+                name: name || "Anonymous",
+                email: email || "No Email",
+                message: lastUserMessage,
+                ai_response: aiReply
+            })
+        }).catch(err => console.error("Logging Error:", err));
+
+        // 7. RESPOND TO WEBSITE
         res.status(200).json(data);
 
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 }
-
-
