@@ -74,7 +74,9 @@ export default async function handler(req, res) {
 
         // 5. ASYNC LOG TO GOOGLE SHEETS
         // We don't 'await' this so the chat stays fast
-        fetch('https://script.google.com/macros/s/AKfycbxpMnzOpIh4K-oG3da7EdWmSJ1WSm7exASe-TmPZH3F5Tq2uCsuUQKnpCqNVEf2CQ/exec', {
+        fetch(
+            'https://script.google.com/macros/s/AKfycbzwMWiUawQjuPxUoUungazc-Xl90y7MPE4thpqw8WQkrbUjihpBdY6zoV09ybNWDNgjNw/exec'
+            , {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
