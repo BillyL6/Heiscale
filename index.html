@@ -272,39 +272,37 @@ nav {
     const chatToggle = document.getElementById('chat-toggle');
 
 
-        function toggleChat(show) {
-        const chatToggle = document.getElementById('chat-toggle');
-        const chatWindow = document.getElementById('chat-window');
 
-        if (show) {
-            // Force the window to show
-            chatWindow.style.display = 'flex'; 
-            chatWindow.classList.add('open');
-            // Hide the floating purple circle
-            chatToggle.style.opacity = '0';
-            chatToggle.style.pointerEvents = 'none';
-            
-            if (messages.length === 0) {
-                addBotMessage(OPENING_MESSAGE);
-            }
-            
-            // Focus the input for typing
-            setTimeout(() => {
-                const input = document.getElementById('chat-input');
-                if (input) input.focus();
-            }, 300);
-        } else {
-            // Hide the window
-            chatWindow.style.display = 'none';
-            chatWindow.classList.remove('open');
-            // Show the floating purple circle again
-            chatToggle.style.display = 'flex';
-            chatToggle.style.opacity = '1';
-            chatToggle.style.pointerEvents = 'all';
+function toggleChat(show) {
+    const chatToggle = document.getElementById('chat-toggle');
+    const chatWindow = document.getElementById('chat-window');
+
+    if (show) {
+        chatWindow.style.display = 'flex'; 
+        chatWindow.classList.add('open');
+        chatToggle.style.opacity = '0';
+        chatToggle.style.pointerEvents = 'none';
+        
+        // --- THE FIX IS HERE ---
+        // Only add the greeting if there are NO messages in the window yet
+        const chatMessages = document.getElementById('chat-messages');
+        if (chatMessages.children.length === 0 && messages.length === 0) {
+            addBotMessage(OPENING_MESSAGE);
         }
+        
+        setTimeout(() => {
+            const input = document.getElementById('chat-input');
+            if (input) input.focus();
+        }, 300);
+    } else {
+        chatWindow.style.display = 'none';
+        chatWindow.classList.remove('open');
+        chatToggle.style.display = 'flex';
+        chatToggle.style.opacity = '1';
+        chatToggle.style.pointerEvents = 'all';
     }
-
-    
+}
+ 
 
 
 
