@@ -159,9 +159,10 @@
         .dot:nth-child(3) { animation-delay: 0.4s; }
         @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
 
- nav {
-    /* This creates a soft 'shadow' that looks like a fade into the black body */
-    box-shadow: 0 10px 30px -10px rgba(0,0,0,0.9);
+nav {
+    /* This creates a mathematical fade from 100% visible to 0% visible at the bottom */
+    -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
 }
    
     
