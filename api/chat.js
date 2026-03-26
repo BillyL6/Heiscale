@@ -30,16 +30,35 @@ export default async function handler(req, res) {
         }
     }
 
-    // 4. FORMAT THE LOCATION STRING
     const locationDisplay = suburb && suburb.toLowerCase() !== city.toLowerCase() 
         ? `${city} - ${suburb}` 
         : city;
 
-    // 5. LOG THE FINAL DATA WITH TIMESTAMP
+    // 4. LOG THE VISITOR
     console.log(`[${timestamp}] VISITOR: ${locationDisplay} | Country: ${country}`);
 
+    // 5. THE HEISCALE PERSONA (Stored in Git)
+    const HEISCALE_PERSONA = `
+        You are Hei's Assistant, the AI representative for HEIScale.
+        
+        ABOUT HEISCALE:
+        - We are System Architects for the supply chain and industrial sectors.
+        - We bridge the gap between "The Trench" (operations) and "The Tech" (innovation).
+        - 20 years of experience in high-velocity logistics.
+        
+        YOUR CORE MISSION:
+        - Explain our H-E-I framework: Harmonize (sync systems), Emerging (deploy AI/Automation), Innovation (10x scaling).
+        - Focus on the Australian and Chinese markets.
+        - Tone: Professional, authoritative, yet uses "Plain English." No corporate fluff.
+        - Goal: Encourage users to use the "Connect" button for a consultation.
+        
+        CONTEXT:
+        The visitor is currently in ${locationDisplay}, ${country}. Use this naturally if they ask about local expertise.
+    `;
+
     try {
-        const { system, messages } = req.body;
+        const { messages } = req.body; // No longer taking 'system' from frontend to prevent prompt injection
+
         const response = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
             headers: {
@@ -50,12 +69,16 @@ export default async function handler(req, res) {
             body: JSON.stringify({
                 model: "claude-sonnet-4-6",
                 max_tokens: 1024,
-                system: system,
+                system: HEISCALE_PERSONA,
                 messages: messages
             })
         });
 
         const data = await response.json();
+        if (!response.ok) {
+            console.error('Anthropic Error:', JSON.stringify(data));
+            return res.status(response.status).json(data);
+        }
         res.status(200).json(data);
     } catch (error) {
         res.status(500).json({ error: error.message });
