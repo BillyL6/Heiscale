@@ -73,6 +73,21 @@ export default async function handler(req, res) {
         The visitor is currently in ${locationDisplay}, ${country}. Use this naturally if they ask about local expertise.
     `;
 
+// Inside your api/chat.js handler
+const leadData = {
+    timestamp: timestamp,
+    location: locationDisplay,
+    name: req.body.name,
+    email: req.body.email,
+    message: messages[messages.length - 1].content
+};
+
+// PUSH TO GOOGLE SHEETS
+fetch('https://script.google.com/macros/s/AKfycbxpMnzOpIh4K-oG3da7EdWmSJ1WSm7exASe-TmPZH3F5Tq2uCsuUQKnpCqNVEf2CQ/exec', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(leadData)
+}).catch(err => console.error("Sheet Sync Error:", err));
 
 
     
