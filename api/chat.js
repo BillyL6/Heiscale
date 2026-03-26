@@ -54,10 +54,10 @@ export default async function handler(req, res) {
         6. Use simple line break to separate ideas.
         7. NO CHUNKY PARAGRAPHS. Max 2 sentences before a line break.
         8. DO NOT be overly formal. Be direct.
-        9. Ask for name and email after 2nd question politely.
+        9. Ask for name and email after the first question politely.
         10. Do not give drect solition.
         11. Playback and to adjust and validate understanding.
-        12. After five questions, gentally closing with playback with a problem statement, and advise following up. 
+        12. After four questions, gentally closing with playback with a problem statement, and advise following up. 
         
 
         CONTEXT:
