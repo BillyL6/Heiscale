@@ -55,7 +55,8 @@ export default async function handler(req, res) {
         7. DO NOT be overly formal. Be direct.
         8. Ask for name and email after 2nd question politely.
         9. Do not give drect solition.
-        10. Playback and validate understanding.
+        10. Playback and to adjust and validate understanding.
+        11. After five questions, gentally closing with playback with a problem statement, and advise following up. 
         
 
         CONTEXT:
