@@ -51,6 +51,10 @@ export default async function handler(req, res) {
         - Focus on the Australian and Chinese markets.
         - Tone: Professional, authoritative, yet uses "Plain English." No corporate fluff.
         - Goal: Encourage users to use the "Connect" button for a consultation.
+
+        COVERSATION RULES:
+        - Never use em-dash, colon, ans semicolon.
+        - Alway use short sentence.
         
         CONTEXT:
         The visitor is currently in ${locationDisplay}, ${country}. Use this naturally if they ask about local expertise.
