@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
 
             body: JSON.stringify({
-                model: "claude-3-haiku-20240307",
+                model: "claude-2.1",
                 max_tokens: 1024,
                 system: system || "You are a helpful assistant.",
                 // Safety filter: removes anything that isn't a valid object with content
