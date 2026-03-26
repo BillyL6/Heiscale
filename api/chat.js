@@ -73,21 +73,30 @@ export default async function handler(req, res) {
         const lastUserMessage = messages[messages.length - 1].content;
 
         // 5. ASYNC LOG TO GOOGLE SHEETS
-        // We don't 'await' this so the chat stays fast
-        fetch(
-            'https://script.google.com/macros/s/AKfycbzwMWiUawQjuPxUoUungazc-Xl90y7MPE4thpqw8WQkrbUjihpBdY6zoV09ybNWDNgjNw/exec'
-            , {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                timestamp,
-                location: `${locationDisplay} (${country})`,
-                name: name || "Anonymous",
-                email: email || "No Email Provided",
-                message: lastUserMessage
-            })
-        }).catch(err => console.error("Sheet Sync Error:", err));
 
+// 1. Get the reply from Claude
+const aiReply = data.content?.[0]?.text || "No response received";
+
+// 2. The "Handshake" to Google
+// This sends the data to the URL you just gave me
+fetch('https://script.google.com/macros/s/AKfycbzwMWiUawQjuPxUoUungazc-Xl90y7MPE4thpqw8WQkrbUjihpBdY6zoV09ybNWDNgjNw/exec', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        timestamp: timestamp,
+        location: `${locationDisplay} (${country})`,
+        name: name || "Anonymous",      // Matches data.name in Script
+        email: email || "No Email",     // Matches data.email in Script
+        message: lastUserMessage,       // Matches data.message in Script
+        ai_response: aiReply            // Matches data.ai_response in Script
+    })
+}).catch(err => console.error("Sheet Sync Error:", err));
+
+// 3. Return the response to the website
+res.status(200).json(data);
+
+
+        
         // 6. TALK TO CLAUDE
         const response = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
