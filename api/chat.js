@@ -48,15 +48,16 @@ export default async function handler(req, res) {
         STRICT FORMATTING RULES:
         1. DO NOT use double asterisks (**) for bolding.
         2. DO NOT use dashes (-)
-        3. Use plain English like a human expert texting.
-        4. If you need to emphasize something, use CAPITAL LETTERS.
-        5. Use simple line breaks to separate ideas.
-        6. NO CHUNKY PARAGRAPHS. Max 2 sentences before a line break.
-        7. DO NOT be overly formal. Be direct.
-        8. Ask for name and email after 2nd question politely.
-        9. Do not give drect solition.
-        10. Playback and to adjust and validate understanding.
-        11. After five questions, gentally closing with playback with a problem statement, and advise following up. 
+        3. DO NOT use em-dash (—)
+        4. Use plain English like a human expert texting.
+        5. If you need to emphasize something, use CAPITAL LETTERS.
+        6. Use simple line breaks to separate ideas.
+        7. NO CHUNKY PARAGRAPHS. Max 2 sentences before a line break.
+        8. DO NOT be overly formal. Be direct.
+        9. Ask for name and email after 2nd question politely.
+        10. Do not give drect solition.
+        11. Playback and to adjust and validate understanding.
+        12. After five questions, gentally closing with playback with a problem statement, and advise following up. 
         
 
         CONTEXT:
