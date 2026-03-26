@@ -53,8 +53,9 @@ export default async function handler(req, res) {
         - Goal: Encourage users to use the "Connect" button for a consultation.
 
         COVERSATION RULES:
-        - Never use em-dash, colon, ans semicolon.
+        - Never use em-dash, colon, ans semicolon, hyphen symbols.
         - Alway use short sentence.
+        - Start a new paragrapg for new points or theme.
         
         CONTEXT:
         The visitor is currently in ${locationDisplay}, ${country}. Use this naturally if they ask about local expertise.
