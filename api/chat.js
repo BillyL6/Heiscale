@@ -2,7 +2,7 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send();
 
     // The endpoint for your combined Google Apps Script
-    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbz9WR9jlSnZXmngyh4D3cqcw85p0tSemw1OGVIPd9AutUIYXMFJa_SyMzdvg1abF4YYHw/exec';
+    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyQKYvsGNaUazlhNhQILrDQhklx-J_evO3MOk0L83lskvX7UNsT_iz0jJakL2X3xvRTGw/exec';
 
     // 1. GENERATE TIMESTAMP (Australia/Sydney Time)
     const now = new Date();
@@ -76,30 +76,23 @@ export default async function handler(req, res) {
         
         // Action: Fetch Available Slots
         if (action === "FETCH_SLOTS") {
-            const slotRes = await fetch(GOOGLE_SHEET_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: "GET_SLOTS" })
-            });
-            const slotData = await slotRes.json();
-            return res.status(200).json(slotData);
+            const r = await fetch(GOOGLE_URL, { method: 'POST', body: JSON.stringify({ action: "GET_SLOTS" }) });
+            return res.status(200).json(await r.json());
         }
 
         // Action: Confirm Final Booking
-        if (action === "CREATE_BOOKING") {
-            const bookRes = await fetch(GOOGLE_SHEET_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+        if (action === "BOOK_MEETING") {
+            const r = await fetch(GOOGLE_URL, { 
+                method: 'POST', 
                 body: JSON.stringify({ 
-                    action: "BOOK_MEETING",
-                    startTime: bookingData.time,
-                    email: bookingData.email,
-                    summary: bookingData.summary
-                })
+                    action: "BOOK_MEETING", 
+                    startTime: bookingData.startTime, // Match GAS Key
+                    email: bookingData.email, 
+                    summary: bookingData.summary 
+                }) 
             });
-            const result = await bookRes.text();
-            return res.status(200).json({ status: result });
-        }
+            return res.status(200).json({ status: await r.text() });
+        }    
 
         // --- STANDARD CHAT LOGIC ---
         const lastUserMessage = messages[messages.length - 1].content;
