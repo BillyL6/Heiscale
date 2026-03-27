@@ -273,123 +273,121 @@
     </button>
 </div>
 
-
-
-    
-
-
 <script>
-    // 1. INITIALIZE SESSION DATA
+
+// TOP OF SCRIPT - Outside any functions
+
+
     const SYSTEM_PROMPT = "You are Hei's Assistant for HEIScale. Be friendly, professional, and concise. Your goal is to understand business challenges and eventually get an email address.";
     const OPENING_MESSAGE = "Hi! I'm Hei's Assistant. What's the biggest challenge in your business operations right now?";
 
-    // Generate a unique Chat ID for this session (e.g., HEI-A7B2)
-    const chatId = 'HEI-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-    
     let messages = [];
+    let leadCaptured = false;
     let isTyping = false;
+    let userName = ""; 
+    let userEmail = "";
 
-    // DOM Elements
     const chatWindow = document.getElementById('chat-window');
     const chatMessages = document.getElementById('chat-messages');
     const chatInput = document.getElementById('chat-input');
     const chatSend = document.getElementById('chat-send');
     const chatToggle = document.getElementById('chat-toggle');
 
-    // 2. CHAT WINDOW CONTROLS
-    function toggleChat(show) {
-        if (show) {
-            chatWindow.style.display = 'flex'; 
-            chatWindow.classList.add('open');
-            chatToggle.style.opacity = '0';
-            chatToggle.style.pointerEvents = 'none';
-            
-            // Only add greeting if the window is empty
-            if (chatMessages.children.length === 0) {
-                addBotMessage(OPENING_MESSAGE);
-            }
-            
-            setTimeout(() => {
-                if (chatInput) chatInput.focus();
-            }, 300);
-        } else {
-            chatWindow.style.display = 'none';
-            chatWindow.classList.remove('open');
-            chatToggle.style.opacity = '1';
-            chatToggle.style.pointerEvents = 'all';
+
+
+function toggleChat(show) {
+    const chatToggle = document.getElementById('chat-toggle');
+    const chatWindow = document.getElementById('chat-window');
+
+    if (show) {
+        chatWindow.style.display = 'flex'; 
+        chatWindow.classList.add('open');
+        chatToggle.style.opacity = '0';
+        chatToggle.style.pointerEvents = 'none';
+        
+        // --- THE FIX IS HERE ---
+        // Only add the greeting if there are NO messages in the window yet
+        const chatMessages = document.getElementById('chat-messages');
+        if (chatMessages.children.length === 0 && messages.length === 0) {
+            addBotMessage(OPENING_MESSAGE);
         }
+        
+        setTimeout(() => {
+            const input = document.getElementById('chat-input');
+            if (input) input.focus();
+        }, 300);
+    } else {
+        chatWindow.style.display = 'none';
+        chatWindow.classList.remove('open');
+        chatToggle.style.display = 'flex';
+        chatToggle.style.opacity = '1';
+        chatToggle.style.pointerEvents = 'all';
     }
+}
+ 
+
+
 
     chatToggle.onclick = () => toggleChat(true);
     document.getElementById('chat-close').onclick = () => toggleChat(false);
     document.getElementById('open-chat-btn').onclick = () => toggleChat(true);
 
-    // 3. MESSAGE HANDLING
+    
+
     function addBotMessage(text) {
-        // Push to local array for AI context
+        // Do NOT push the opening message to the formal 'messages' array 
+        // if it's the very first message. Anthropic requires User to be first.
         if (messages.length > 0) {
             messages.push({ role: 'assistant', content: text });
         }
         renderMessage(text, 'bot');
+        
+        if (messages.filter(m => m.role === 'assistant').length === 2 && !leadCaptured) {
+            setTimeout(showLeadForm, 800);
+        }
     }
+
 
 async function sendMessage() {
     const text = chatInput.value.trim();
     if (!text || isTyping) return;
 
     chatInput.value = '';
-    renderMessage(text, 'user');
     messages.push({ role: 'user', content: text });
+    renderMessage(text, 'user');
     
     isTyping = true;
     showTyping(true);
 
-    // 1. DETECT MEETING INTENT
-    const bookingKeywords = ['book', 'meeting', 'schedule', 'session', 'appointment', 'meet'];
-    const isBookingIntent = bookingKeywords.some(word => text.toLowerCase().includes(word));
-
     try {
-        let payload = { chatId: chatId, messages: messages };
-        
-        // If they want to meet, tell Vercel to fetch slots
-        if (isBookingIntent) {
-            payload.action = "FETCH_SLOTS";
-        }
-
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({
+                messages: messages,
+                name: userName,   // Ensure this variable is global (at the top of script)
+                email: userEmail  // Ensure this variable is global (at the top of script)
+            })
         });
         
         const data = await response.json();
         showTyping(false);
 
-        // 2. THE FIX: HANDLE THE SLOTS ARRAY
-        if (data.slots && Array.isArray(data.slots)) {
-            let slotList = data.slots.map((s, i) => `${i + 1}. ${s}`).join('\n');
-            const botMsg = `I HAVE CHECKED THE CALENDAR. HERE ARE THE NEXT AVAILABLE SLOTS:\n\n${slotList}\n\nWHICH ONE WORKS FOR YOU? PLEASE TYPE THE NUMBER OR THE TIME.`;
-            
-            renderMessage(botMsg, 'bot');
-            messages.push({ role: 'assistant', content: botMsg });
-        } 
-        // 3. HANDLE STANDARD AI TEXT
-        else if (data.content && data.content[0]) {
+        if (data.content && data.content[0]) {
             const botMsg = data.content[0].text;
             renderMessage(botMsg, 'bot');
             messages.push({ role: 'assistant', content: botMsg });
         }
     } catch (e) {
         showTyping(false);
-        console.error("Connection Error:", e);
-        renderMessage("CONNECTION INTERRUPTED. SYSTEM OFFLINE.", 'bot');
+        console.error(e);
     }
     isTyping = false;
 }
-    
-   
 
-    // 4. UI RENDERING
+
+
+    
     function renderMessage(text, type) {
         const el = document.createElement('div');
         el.className = `msg msg-${type}`;
@@ -415,13 +413,46 @@ async function sendMessage() {
         }
     }
 
-    // Keyboard Listeners
+    
+
     chatSend.onclick = sendMessage;
     chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
 
+    function showLeadForm() {
+        if (leadCaptured) return;
+        const form = document.createElement('div');
+        form.className = 'lead-form';
+        form.innerHTML = `
+            <p style="font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 4px;">I'd love to have Hei follow up with you:</p>
+            <input type="text" id="l-name" placeholder="Your Name">
+            <input type="email" id="l-email" placeholder="Your Email">
+            <button onclick="submitLead()" style="background:#00fffb; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; border:none; color:white;">Connect →</button>
+        `;
+        chatMessages.appendChild(form);
+        scrollToBottom();
+    }
+
+
+window.submitLead = () => {
+    const nameInput = document.getElementById('l-name').value.trim();
+    const emailInput = document.getElementById('l-email').value.trim();
+    
+    if(nameInput && emailInput) {
+        userName = nameInput;   // Update the GLOBAL variable
+        userEmail = emailInput; // Update the GLOBAL variable
+        leadCaptured = true;
+        
+        document.querySelector('.lead-form').remove();
+        renderMessage(`Acknowledged, ${userName}.`, 'bot');
+
+        // This message will now trigger a row in Google Sheets WITH the name
+        sendMessage("SYSTEM_LEAD_SUCCESS"); 
+    }
+};
+
+
+
+    
 </script>
-
-
-
 </body>
 </html>
