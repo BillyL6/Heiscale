@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send();
 
-    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyp6RBmXXZtkxCehTKQRXQHgiZyu22JPJK-tJlhAYtXY_DJQP12z80NU4FxWRBnYJygqw/exec';
+   // const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyp6RBmXXZtkxCehTKQRXQHgiZyu22JPJK-tJlhAYtXY_DJQP12z80NU4FxWRBnYJygqw/exec';
 
     // 1. GENERATE TIMESTAMP (Australia/Sydney Time)
     const now = new Date();
@@ -88,18 +88,18 @@ export default async function handler(req, res) {
         const aiReply = data.content?.[0]?.text || "No response content";
 
         // 6. LOG FULL PACKAGE TO GOOGLE SHEETS
-        fetch(GOOGLE_SHEET_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                timestamp: timestamp,
-                location: `${locationDisplay} (${country})`,
-                name: name || "Anonymous",
-                email: email || "No Email",
-                message: lastUserMessage,
-                ai_response: aiReply
-            })
-        }).catch(err => console.error("Logging Error:", err));
+     //   fetch(GOOGLE_SHEET_URL, {
+     //       method: 'POST',
+      //      headers: { 'Content-Type': 'application/json' },
+      //      body: JSON.stringify({
+      //          timestamp: timestamp,
+      //          location: `${locationDisplay} (${country})`,
+      //          name: name || "Anonymous",
+      //          email: email || "No Email",
+      //          message: lastUserMessage,
+      //          ai_response: aiReply
+      //      })
+      //  }).catch(err => console.error("Logging Error:", err));
 
         // 7. RESPOND TO WEBSITE
         res.status(200).json(data);
