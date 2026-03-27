@@ -1,8 +1,7 @@
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send();
 
-    // UPDATE THIS URL with your latest "Combined" Google Apps Script Deployment URL
-    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbz9WR9jlSnZXmngyh4D3cqcw85p0tSemw1OGVIPd9AutUIYXMFJa_SyMzdvg1abF4YYHw/exec';
+    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzwMWiUawQjuPxUoUungazc-Xl90y7MPE4thpqw8WQkrbUjihpBdY6zoV09ybNWDNgjNw/exec';
 
     // 1. GENERATE TIMESTAMP (Australia/Sydney Time)
     const now = new Date();
@@ -18,6 +17,7 @@ export default async function handler(req, res) {
     const lat = req.headers['x-vercel-ip-latitude'];
     const lon = req.headers['x-vercel-ip-longitude'];
 
+    // 3. REVERSE GEOCODE TO GET SUBURB (Enhanced Fallback)
     let locationDisplay = city;
     if (lat && lon) {
         try {
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
         } catch (e) { console.error("Geo Error"); }
     }
 
-    // 3. THE HEISCALE PERSONA (With Calendar Instructions)
+    // 4. THE FULL HEISCALE PERSONA
     const HEISCALE_PERSONA = `
         You are Hei's Assistant, the AI representative for HEIScale.
         
@@ -59,44 +59,16 @@ export default async function handler(req, res) {
         11. Playback and to adjust and validate understanding.
         12. After four questions, gentally closing with playback with a problem statement, and advise following up. 
         
-        Context: User is in ${locationDisplay}, ${country}.
+
+        CONTEXT:
+        The visitor is in ${locationDisplay}, ${country}. Use this naturally if relevant.
     `;
 
     try {
-        const { messages, chatId, action, bookingData } = req.body;
-
-        // --- CALENDAR ACTION HANDLERS ---
-        
-        // Handle Request for Slots
-        if (action === "FETCH_SLOTS") {
-            const slotRes = await fetch(GOOGLE_SHEET_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: "GET_SLOTS" })
-            });
-            const slotData = await slotRes.json();
-            return res.status(200).json(slotData);
-        }
-
-        // Handle Final Booking
-        if (action === "CREATE_BOOKING") {
-            const bookRes = await fetch(GOOGLE_SHEET_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    action: "BOOK_MEETING",
-                    startTime: bookingData.time,
-                    email: bookingData.email,
-                    summary: bookingData.summary
-                })
-            });
-            const result = await bookRes.text();
-            return res.status(200).json({ status: result });
-        }
-
-        // --- STANDARD CHAT LOGIC ---
+        const { messages, name, email } = req.body;
         const lastUserMessage = messages[messages.length - 1].content;
 
+        // 5. TALK TO CLAUDE FIRST
         const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
             headers: {
@@ -108,28 +80,28 @@ export default async function handler(req, res) {
                 model: "claude-sonnet-4-6", 
                 max_tokens: 1024,
                 system: HEISCALE_PERSONA,
-                messages: messages.map(m => ({ role: m.role, content: m.content }))
+                messages: messages
             })
         });
 
         const data = await aiResponse.json();
-        const aiReply = data.content?.[0]?.text || "NO RESPONSE CONTENT";
+        const aiReply = data.content?.[0]?.text || "No response content";
 
-        // LOG TO GOOGLE SHEETS
-        try {
-            await fetch(GOOGLE_SHEET_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chatId: chatId,
-                    timestamp: timestamp,
-                    location: `${locationDisplay} (${country})`,
-                    message: lastUserMessage,
-                    ai_response: aiReply
-                })
-            });
-        } catch (err) { console.error("Logging Error:", err); }
+        // 6. LOG FULL PACKAGE TO GOOGLE SHEETS
+        fetch(GOOGLE_SHEET_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                timestamp: timestamp,
+                location: `${locationDisplay} (${country})`,
+                name: name || "Anonymous",
+                email: email || "No Email",
+                message: lastUserMessage,
+                ai_response: aiReply
+            })
+        }).catch(err => console.error("Logging Error:", err));
 
+        // 7. RESPOND TO WEBSITE
         res.status(200).json(data);
 
     } catch (error) {
