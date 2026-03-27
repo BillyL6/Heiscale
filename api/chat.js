@@ -1,7 +1,8 @@
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send();
 
-    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzkvyYaNQ51oYOwnlWNhKL7QXK2mGw6b8vFFakSdmFmznz4k11CrrvP77Js2j8RVM2q/exec';
+    // UPDATE THIS URL with your latest "Combined" Google Apps Script Deployment URL
+    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbz9WR9jlSnZXmngyh4D3cqcw85p0tSemw1OGVIPd9AutUIYXMFJa_SyMzdvg1abF4YYHw/exec';
 
     // 1. GENERATE TIMESTAMP (Australia/Sydney Time)
     const now = new Date();
@@ -11,13 +12,12 @@ export default async function handler(req, res) {
         timeStyle: 'medium' 
     });
 
-    // 2. GET GEO DATA FROM VERCEL HEADERS
+    // 2. GET GEO DATA FROM VERCEL
     const city = decodeURIComponent(req.headers['x-vercel-ip-city'] || 'Unknown');
     const country = req.headers['x-vercel-ip-country'] || 'Unknown';
     const lat = req.headers['x-vercel-ip-latitude'];
     const lon = req.headers['x-vercel-ip-longitude'];
 
-    // 3. REVERSE GEOCODE (Suburb Level)
     let locationDisplay = city;
     if (lat && lon) {
         try {
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
         } catch (e) { console.error("Geo Error"); }
     }
 
-    // 4. SYSTEM PERSONA
+    // 3. THE HEISCALE PERSONA (With Calendar Instructions)
     const HEISCALE_PERSONA = `
         You are Hei's Assistant, the AI representative for HEIScale.
         
@@ -63,10 +63,40 @@ export default async function handler(req, res) {
     `;
 
     try {
-        const { messages, chatId } = req.body;
+        const { messages, chatId, action, bookingData } = req.body;
+
+        // --- CALENDAR ACTION HANDLERS ---
+        
+        // Handle Request for Slots
+        if (action === "FETCH_SLOTS") {
+            const slotRes = await fetch(GOOGLE_SHEET_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: "GET_SLOTS" })
+            });
+            const slotData = await slotRes.json();
+            return res.status(200).json(slotData);
+        }
+
+        // Handle Final Booking
+        if (action === "CREATE_BOOKING") {
+            const bookRes = await fetch(GOOGLE_SHEET_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    action: "BOOK_MEETING",
+                    startTime: bookingData.time,
+                    email: bookingData.email,
+                    summary: bookingData.summary
+                })
+            });
+            const result = await bookRes.text();
+            return res.status(200).json({ status: result });
+        }
+
+        // --- STANDARD CHAT LOGIC ---
         const lastUserMessage = messages[messages.length - 1].content;
 
-        // 5. CALL ANTHROPIC (Claude 3.5 Sonnet)
         const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
             headers: {
@@ -83,9 +113,9 @@ export default async function handler(req, res) {
         });
 
         const data = await aiResponse.json();
-        const aiReply = data.content?.[0]?.text || "NO RESPONSE FROM ARCHITECT.";
+        const aiReply = data.content?.[0]?.text || "NO RESPONSE CONTENT";
 
-        // 6. LOG TO GOOGLE SHEETS (Background Await)
+        // LOG TO GOOGLE SHEETS
         try {
             await fetch(GOOGLE_SHEET_URL, {
                 method: 'POST',
@@ -98,11 +128,8 @@ export default async function handler(req, res) {
                     ai_response: aiReply
                 })
             });
-        } catch (err) {
-            console.error("SHEET LOGGING FAILED:", err);
-        }
+        } catch (err) { console.error("Logging Error:", err); }
 
-        // 7. RESPOND TO FRONTEND
         res.status(200).json(data);
 
     } catch (error) {
