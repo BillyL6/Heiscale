@@ -289,6 +289,9 @@
     let messages = [];
     let isTyping = false;
 
+    let currentSlots = []; 
+    let selectedTime = null;
+
     // DOM Elements
     const chatWindow = document.getElementById('chat-window');
     const chatMessages = document.getElementById('chat-messages');
@@ -333,6 +336,8 @@
         renderMessage(text, 'bot');
     }
 
+    
+
 async function sendMessage() {
     const text = chatInput.value.trim();
     if (!text || isTyping) return;
@@ -344,15 +349,59 @@ async function sendMessage() {
     isTyping = true;
     showTyping(true);
 
-    // 1. DETECT MEETING INTENT
-    const bookingKeywords = ['book', 'meeting', 'schedule', 'session', 'appointment', 'meet'];
-    const isBookingIntent = bookingKeywords.some(word => text.toLowerCase().includes(word));
+    // Regex to find email in the text
+    const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]{2,}/);
+    if (emailMatch) userEmail = emailMatch[0];
 
     try {
-        let payload = { chatId: chatId, messages: messages };
-        
-        // If they want to meet, tell Vercel to fetch slots
-        if (isBookingIntent) {
+        let payload = { chatId, messages };
+
+        // LOGIC A: If user is selecting a slot (e.g., typing "1", "2", or "3")
+        const slotIndex = parseInt(text) - 1;
+        if (!isNaN(slotIndex) && currentSlots[slotIndex]) {
+            selectedTime = currentSlots[slotIndex];
+            
+            if (!userEmail) {
+                const askEmail = "EXCELLENT CHOICE. I HAVE LOCKED IN " + selectedTime.toUpperCase() + ". \n\nPLEASE PROVIDE YOUR EMAIL ADDRESS SO I CAN DISPATCH THE CALENDAR INVITE.";
+                renderMessage(askEmail, 'bot');
+                messages.push({ role: 'assistant', content: askEmail });
+                showTyping(false);
+                isTyping = false;
+                return; // Stop here and wait for email
+            }
+        }
+
+        // LOGIC B: If we have both a selected time AND an email, trigger the final booking
+        if (selectedTime && userEmail) {
+            payload.action = "CREATE_BOOKING";
+            payload.bookingData = {
+                time: selectedTime,
+                email: userEmail,
+                summary: messages[0].content // Use the first message as the problem statement
+            };
+            
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            
+            const successMsg = "CONFIRMED. THE HEISCALES MEETING INVITE HAS BEEN DISPATCHED TO " + userEmail.toUpperCase() + ". \n\nSEE YOU THEN.";
+            renderMessage(successMsg, 'bot');
+            messages.push({ role: 'assistant', content: successMsg });
+            
+            // Reset booking state
+            selectedTime = null;
+            currentSlots = [];
+            showTyping(false);
+            isTyping = false;
+            return;
+        }
+
+        // LOGIC C: Standard Slot Fetching
+        const bookingKeywords = ['book', 'meeting', 'schedule', 'session', 'meet'];
+        if (bookingKeywords.some(word => text.toLowerCase().includes(word))) {
             payload.action = "FETCH_SLOTS";
         }
 
@@ -365,29 +414,24 @@ async function sendMessage() {
         const data = await response.json();
         showTyping(false);
 
-        // 2. THE FIX: HANDLE THE SLOTS ARRAY
-        if (data.slots && Array.isArray(data.slots)) {
+        if (data.slots) {
+            currentSlots = data.slots; // STORE SLOTS IN MEMORY
             let slotList = data.slots.map((s, i) => `${i + 1}. ${s}`).join('\n');
-            const botMsg = `I HAVE CHECKED THE CALENDAR. HERE ARE THE NEXT AVAILABLE SLOTS:\n\n${slotList}\n\nWHICH ONE WORKS FOR YOU? PLEASE TYPE THE NUMBER OR THE TIME.`;
-            
+            const botMsg = `I HAVE CHECKED THE CALENDAR. WHICH ONE WORKS FOR YOU?\n\n${slotList}\n\nTYPE THE NUMBER TO LOCK IT IN.`;
             renderMessage(botMsg, 'bot');
             messages.push({ role: 'assistant', content: botMsg });
-        } 
-        // 3. HANDLE STANDARD AI TEXT
-        else if (data.content && data.content[0]) {
-            const botMsg = data.content[0].text;
-            renderMessage(botMsg, 'bot');
-            messages.push({ role: 'assistant', content: botMsg });
+        } else if (data.content && data.content[0]) {
+            renderMessage(data.content[0].text, 'bot');
+            messages.push({ role: 'assistant', content: data.content[0].text });
         }
     } catch (e) {
         showTyping(false);
-        console.error("Connection Error:", e);
-        renderMessage("CONNECTION INTERRUPTED. SYSTEM OFFLINE.", 'bot');
+        renderMessage("CONNECTION ERROR. ARCHITECT OFFLINE.", 'bot');
     }
     isTyping = false;
 }
+
     
-   
 
     // 4. UI RENDERING
     function renderMessage(text, type) {
