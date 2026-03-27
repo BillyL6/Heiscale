@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send();
 
-    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzwMWiUawQjuPxUoUungazc-Xl90y7MPE4thpqw8WQkrbUjihpBdY6zoV09ybNWDNgjNw/exec';
+    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyp6RBmXXZtkxCehTKQRXQHgiZyu22JPJK-tJlhAYtXY_DJQP12z80NU4FxWRBnYJygqw/exec';
 
     // 1. GENERATE TIMESTAMP (Australia/Sydney Time)
     const now = new Date();
