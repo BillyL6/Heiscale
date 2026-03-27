@@ -291,6 +291,8 @@
 
     let currentSlots = []; 
     let selectedTime = null;
+    let userEmail = ""; 
+    
 
     // DOM Elements
     const chatWindow = document.getElementById('chat-window');
@@ -357,24 +359,19 @@ async function sendMessage() {
         let payload = { chatId, messages };
 
         // LOGIC A: If user is selecting a slot (e.g., typing "1", "2", or "3")
-        const slotIndex = parseInt(text) - 1;
-        if (!isNaN(slotIndex) && currentSlots[slotIndex]) {
-            selectedTime = currentSlots[slotIndex];
-            
-            if (!userEmail) {
-                const askEmail = "EXCELLENT CHOICE. I HAVE LOCKED IN " + selectedTime.toUpperCase() + ". \n\nPLEASE PROVIDE YOUR EMAIL ADDRESS SO I CAN DISPATCH THE CALENDAR INVITE.";
-                renderMessage(askEmail, 'bot');
-                messages.push({ role: 'assistant', content: askEmail });
-                showTyping(false);
-                isTyping = false;
-                return; // Stop here and wait for email
-            }
+        const slotIdx = parseInt(text) - 1;
+            if (!isNaN(slotIdx) && currentSlots[slotIdx]) {
+                selectedTime = currentSlots[slotIdx].value; // Store the ISO string
+                if (!userEmail) {
+                    renderMessage("LOCKED IN. NOW, PLEASE PROVIDE YOUR EMAIL TO FINALIZE.", 'bot');
+                    return; 
+                }
         }
 
         // LOGIC B: If we have both a selected time AND an email, trigger the final booking
-        if (selectedTime && userEmail) {
-            payload.action = "CREATE_BOOKING";
-            payload.bookingData = {
+            if (selectedTime && userEmail) {
+                payload.action = "BOOK_MEETING";
+                payload.bookingData = { startTime: selectedTime, email: userEmail, summary: messages[0].content };
                 time: selectedTime,
                 email: userEmail,
                 summary: messages[0].content // Use the first message as the problem statement
