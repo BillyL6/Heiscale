@@ -5,53 +5,194 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HEIScale | Harmonized Emerging Innovation</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; margin: 0; }
+        .accent-purple { color: #a100ff; }
         .electric-cyan { color: #00fffb; }
         .btn-premium { border: 1px solid #fff; transition: all 0.3s; cursor: pointer; }
         .btn-premium:hover { background: #fff; color: #000; }
 
-        #chat-widget { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
-        
-        /* FIX: Changed display: none to a class-based toggle */
-        #chat-window { 
-            width: 380px; max-width: calc(100vw - 48px); height: 520px; 
-            background: #0a0a0a; border: 1px solid rgba(0,255,251,0.3); 
-            border-radius: 16px; display: none; /* Keep this */
+        /* --- CHAT WIDGET --- */
+        #chat-widget { 
+            position: fixed; 
+            bottom: 24px; 
+            right: 24px; 
+            z-index: 9999; 
+            display: flex; 
             flex-direction: column; 
-            overflow: hidden; box-shadow: 0 0 40px rgba(0,255,251,0.15); 
+            align-items: flex-end; 
+            gap: 12px; 
+            pointer-events: none; /* Allows clicks to pass through empty space */
         }
 
-        /* FIX: Forced display flex with !important to override the ID style */
-        #chat-window.open { display: flex !important; }
+        /* Re-enable clicks for actual interactive elements */
+        #chat-window, #chat-toggle, #chat-send, #chat-input, #chat-close { 
+            pointer-events: all; 
+        }
 
-        #chat-header { padding: 16px 20px; background: #0f0f0f; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; }
-        .chat-avatar { width: 36px; height: 36px; background: #00fffb; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #000; }
-        #chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; white-space: pre-wrap; }
+        #chat-window { 
+            width: 380px; 
+            max-width: calc(100vw - 48px); 
+            height: 520px; 
+            background: #0a0a0a; 
+            border: 1px solid rgba(161,0,255,0.3); 
+            border-radius: 16px; 
+            display: none; 
+            flex-direction: column; 
+            overflow: hidden; 
+            box-shadow: 0 0 40px rgba(161,0,255,0.15); 
+        }
+
+        #chat-window.open { display: flex; }
+
+        #chat-header { 
+            padding: 16px 20px; 
+            background: #0f0f0f; 
+            border-bottom: 1px solid rgba(255,255,255,0.08); 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+        }
+
+        .chat-avatar { 
+            width: 36px; 
+            height: 36px; 
+            background: #00ccc9; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: 900; 
+        }
+
+        #chat-messages { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+            scrollbar-width: thin;
+            line-height: 1.5;
+            font-size: 14px;
+            white-space: pre-wrap; /* Maintains the line breaks the AI sends */
+            margin-bottom: 12px; /* Adds space between the bot's "thought" blocks */
+        }
+
+
         
-        .msg { max-width: 85%; padding: 12px 16px; border-radius: 12px; line-height: 1.5; word-wrap: break-word; }
+        .msg { 
+            max-width: 85%; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 14px; 
+            line-height: 1.5; 
+            word-wrap: break-word;
+        }
+
         .msg-bot { background: #1a1a1a; border: 1px solid rgba(255,255,255,0.06); align-self: flex-start; border-bottom-left-radius: 4px; }
-        .msg-user { background: #00fffb; color: #000; align-self: flex-end; border-bottom-right-radius: 4px; font-weight: 500; }
+        .msg-user { background: #00ccc9; align-self: flex-end; border-bottom-right-radius: 4px; }
 
-        #chat-input-area { padding: 16px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; gap: 8px; background: #0f0f0f; }
-        #chat-input { flex: 1; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; color: #fff; outline: none; }
-        #chat-send { width: 42px; height: 42px; background: #00fffb; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; }
-        #chat-toggle { width: 56px; height: 56px; background: #00fffb; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 24px rgba(0,255,251,0.4); border: none; transition: transform 0.2s; }
-        #chat-toggle:active { transform: scale(0.9); }
+        #chat-input-area { 
+            padding: 16px; 
+            border-top: 1px solid rgba(255,255,255,0.08); 
+            display: flex; 
+            gap: 8px; 
+            background: #0f0f0f; 
+        }
 
+        #chat-input { 
+            flex: 1; 
+            background: #1a1a1a; 
+            border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 8px; 
+            padding: 10px 14px; 
+            color: #fff; 
+            outline: none; 
+            font-size: 14px;
+        }
+
+        #chat-send { 
+            width: 42px; 
+            height: 42px; 
+            background: #00ccc9; 
+            border-radius: 8px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            border: none;
+        }
+
+        #chat-toggle { 
+            width: 56px; 
+            height: 56px; 
+            background: #00fffb; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            box-shadow: 0 4px 24px rgba(161,0,255,0.4);
+            border: none;
+        }
+
+        .lead-form { 
+            background: #1a1a1a; 
+            border: 1px solid rgba(255,255,255,0.08); 
+            border-radius: 12px; 
+            padding: 16px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            width: 90%; 
+        }
+
+        .lead-form input { 
+            background: #111; 
+            border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 6px; 
+            padding: 8px; 
+            color: #fff; 
+            font-size: 13px; 
+            outline: none;
+        }
+
+        /* --- TYPING ANIMATION --- */
         .msg-typing { display: flex; gap: 4px; padding: 12px 16px; background: #1a1a1a; border-radius: 12px; align-self: flex-start; }
-        .dot { width: 6px; height: 6px; background: rgba(0,255,251,0.6); border-radius: 50%; animation: bounce 1.2s infinite; }
+        .dot { width: 6px; height: 6px; background: rgba(255,255,255,0.4); border-radius: 50%; animation: bounce 1.2s infinite; }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
         @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
-    </style>
+
+        nav {
+            /* This creates a mathematical fade from 100% visible to 0% visible at the bottom */
+            -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+            mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+        }
+   
     
+    </style>
 </head>
 <body>
 
-<section class="px-8 pt-40 pb-32 max-w-7xl mx-auto">
+
+<nav class="fixed top-0 w-full h-40 z-50 transition-all duration-300 bg-black/60 backdrop-blur-md border-b border-white/5 bg-gradient-to-b from-black via-black/90 to-transparent px-10 flex items-center justify-between">
+    <div class="flex flex-col">
+        <span class="text-3xl font-black tracking-tighter leading-none">
+            HEI<span class="electric-cyan">Scale</span>
+        </span>
+        <span class="text-[10px] uppercase tracking-[0.3em] text-gray-500 mt-1 font-bold">
+            Supply Chain Technology
+        </span>
+    </div>
+
+</nav>
+
+<section class="px-8 pt-60 pb-32 max-w-7xl mx-auto">
     <h1 class="text-5xl md:text-8xl font-black mb-8 leading-none tracking-tighter">
-        HARMONIZED SYSTEMS.<br>
+        HARMONIZED SYSTEMS.<br>EMERGING TECH.<br>
         <span class="electric-cyan">INNOVATION AT SCALE.</span>
     </h1>
     <button id="open-chat-btn" class="btn-premium px-8 py-4 text-sm font-bold uppercase tracking-widest">
@@ -59,12 +200,59 @@
     </button>
 </section>
 
+
+<section class="bg-zinc-900 py-24 px-8">
+    <div class="max-w-7xl mx-auto">
+        <h2 class="text-xs font-bold uppercase tracking-widest mb-16 text-gray-500">The Framework</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-16">
+            <div>
+                <span class="text-4xl font-bold mb-4 block">01</span>
+                <h3 class="text-2xl font-bold mb-4">HARMONIZED</h3>
+                <p class="text-gray-400">Eliminating operational noise. We sync systems and teams into a unified source of truth.
+                <br><br>We Organize the Chaos. We go into a business and find all the broken links. We connect the software, the people, and the data so that everyone is looking at the same "truth." No more guessing why an order is late.
+                </p>
+            </div>
+            <div>
+                <span class="text-4xl font-bold mb-4 block">02</span>
+                <h3 class="text-2xl font-bold mb-4">EMERGING</h3>
+                <p class="text-gray-400">Scouting the next wave. Integrating new technology into real-world industrial scale.
+                <br><br>We Bring in the Future. We don't just use old tools. We look at the newest technology, and figure out which ones actually work for a real-world warehouse or supply chain. We skip the "hype" and install the "help."
+                </p>
+            </div>
+            <div>
+                <span class="text-4xl font-bold mb-4 block">03</span>
+                <h3 class="text-2xl font-bold mb-4">INNOVATION</h3>
+                <p class="text-gray-400">The operational edge. Deploying 20 years of 'Supply Chain Hacks' for non-linear growth.
+                <br><br>We Build the Engine for Growth. A business shouldn't break just because it gets more customers. We use "supply chain hacks" to build a system that can handle 10x the orders without needing 10x the stress.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="px-8 py-32 max-w-7xl mx-auto">
+    <div class="max-w-7xl mx-auto">
+            <h2 class="text-xs font-bold uppercase tracking-widest mb-16 text-gray-500">ABOUT</h2>
+      
+        <p class="text-gray-200">Turns messy, manual supply chain operations into a smooth, high-speed engine built for growth.</p>
+  <br>
+        
+        <p class="text-gray-400">
+            HEIScale is here to resolve the exhaustion of fighting against fragmented systems that no longer keep pace with the ambitions of a growing business.<br><br>
+            Building a resilient supply chain is a deeply human endeavor that begins with the quiet relief of finally bringing order to the chaos. It is the recognition that behind every messy ERP or disconnected CRM is a team of people fighting against the friction of bad data, and the first step toward true scale is restoring the trust they have in their own tools.<br><br>
+            This transformation replaces the daily stress of manual workarounds with a clean, synchronized foundation that allows an operation to finally breathe. From that place of stability, the focus shifts to a pragmatic exploration of the future, filtering through the noise of high-tech trends to find the specific tools that actually make a hard day's work feel effortless.<br><br>
+            It is a journey rooted in twenty years of late nights in supply chain problems, where the ultimate goal isn't just to install software, but to engineer a sense of flow that lets a business grow without losing its pulse. By blending this seasoned perspective with a forward-thinking curiosity, the logistics function ceases to be a source of frustration and instead becomes a source of pride, a smooth, scalable engine built on the hard-won lessons of the past and the limitless potential of what comes next.
+        </p>
+    </div>
+</section>
+    
 <div id="chat-widget">
     <div id="chat-window">
         <div id="chat-header">
             <div class="flex items-center gap-3">
                 <div class="chat-avatar">H</div>
-                <div class="text-sm font-bold">Hei's Assistant</div>
+                <div><div class="text-sm font-bold">Hei's Assistant</div></div>
             </div>
             <button id="chat-close" style="color: rgba(255,255,255,0.5);">✕</button>
         </div>
@@ -72,143 +260,168 @@
         <div id="chat-input-area">
             <input id="chat-input" type="text" placeholder="Ask me anything..." autocomplete="off" />
             <button id="chat-send">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2"/>
+                </svg>
             </button>
         </div>
     </div>
-    <button id="chat-toggle">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <button id="chat-toggle" aria-label="Open chat">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z"/>
+        </svg>
     </button>
 </div>
 
+
+
+    
+
+
 <script>
-        const OPENING_MESSAGE = "Hi! I'm Hei's Assistant. What's the biggest challenge in your business operations right now?";
-        const chatId = 'HEI-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-        
-        let messages = [];
-        let isTyping = false;
-        let currentSlots = []; 
-        let selectedTime = null;
-        let userEmail = "";
+    // 1. INITIALIZE SESSION DATA
+    const SYSTEM_PROMPT = "You are Hei's Assistant for HEIScale. Be friendly, professional, and concise. Your goal is to understand business challenges and eventually get an email address.";
+    const OPENING_MESSAGE = "Hi! I'm Hei's Assistant. What's the biggest challenge in your business operations right now?";
 
-        const chatWindow = document.getElementById('chat-window');
-        const chatMessages = document.getElementById('chat-messages');
-        const chatInput = document.getElementById('chat-input');
-        const chatSend = document.getElementById('chat-send');
-        const chatToggle = document.getElementById('chat-toggle');
-        const openChatBtn = document.getElementById('open-chat-btn');
+    // Generate a unique Chat ID for this session (e.g., HEI-A7B2)
+    const chatId = 'HEI-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+    
+    let messages = [];
+    let isTyping = false;
 
-        function toggleChat(show) {
-            console.log("Toggle Chat:", show); // Debug line
-            if (show) {
-                chatWindow.classList.add('open');
-                chatToggle.style.display = 'none'; // Hide toggle when open
-                if (chatMessages.children.length === 0) {
-                    renderMessage(OPENING_MESSAGE, 'bot');
-                    messages.push({ role: 'assistant', content: OPENING_MESSAGE });
-                }
-                setTimeout(() => chatInput.focus(), 300);
-            } else {
-                chatWindow.classList.remove('open');
-                chatToggle.style.display = 'flex'; // Show toggle when closed
-            }
-        }
+    // DOM Elements
+    const chatWindow = document.getElementById('chat-window');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const chatSend = document.getElementById('chat-send');
+    const chatToggle = document.getElementById('chat-toggle');
 
-        // Event Listeners
-        chatToggle.addEventListener('click', () => toggleChat(true));
-        document.getElementById('chat-close').addEventListener('click', () => toggleChat(false));
-        if(openChatBtn) openChatBtn.addEventListener('click', () => toggleChat(true));
-
-        async function sendMessage() {
-            const text = chatInput.value.trim();
-            if (!text || isTyping) return;
-
-            chatInput.value = '';
-            renderMessage(text, 'user');
-            messages.push({ role: 'user', content: text });
+    // 2. CHAT WINDOW CONTROLS
+    function toggleChat(show) {
+        if (show) {
+            chatWindow.style.display = 'flex'; 
+            chatWindow.classList.add('open');
+            chatToggle.style.opacity = '0';
+            chatToggle.style.pointerEvents = 'none';
             
-            isTyping = true;
-            showTyping(true);
-
-            const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]{2,}/);
-            if (emailMatch) userEmail = emailMatch[0];
-
-            try {
-                let payload = { chatId, messages };
-                const slotIdx = parseInt(text) - 1;
-
-                if (!isNaN(slotIdx) && currentSlots[slotIdx]) {
-                    selectedTime = currentSlots[slotIdx].value; 
-                    if (!userEmail) {
-                        const askEmail = "EXCELLENT. I HAVE LOCKED IN " + currentSlots[slotIdx].label.toUpperCase() + ". \n\nPLEASE PROVIDE YOUR EMAIL TO RECEIVE THE INVITE.";
-                        showTyping(false);
-                        renderMessage(askEmail, 'bot');
-                        messages.push({ role: 'assistant', content: askEmail });
-                        isTyping = false;
-                        return; 
-                    }
-                }
-
-                if (selectedTime && userEmail) {
-                    payload.action = "BOOK_MEETING";
-                    payload.bookingData = { startTime: selectedTime, email: userEmail, summary: messages[0].content };
-                } else if (['meet', 'book', 'schedule', 'appointment'].some(w => text.toLowerCase().includes(w))) {
-                    payload.action = "FETCH_SLOTS";
-                }
-
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                const data = await response.json();
-                showTyping(false);
-
-                if (data.slots) {
-                    currentSlots = data.slots;
-                    let slotList = data.slots.map((s, i) => `${i + 1}. ${s.label}`).join('\n');
-                    const botMsg = `I'VE CHECKED THE CALENDAR. WHICH WORKS BEST?\n\n${slotList}\n\nREPLY WITH THE NUMBER.`;
-                    renderMessage(botMsg, 'bot');
-                    messages.push({ role: 'assistant', content: botMsg });
-                } else if (payload.action === "BOOK_MEETING") {
-                    renderMessage("DONE. THE INVITE IS ON ITS WAY TO " + userEmail.toUpperCase() + ".", 'bot');
-                    selectedTime = null;
-                } else if (data.content) {
-                    renderMessage(data.content[0].text, 'bot');
-                    messages.push({ role: 'assistant', content: data.content[0].text });
-                }
-            } catch (e) {
-                showTyping(false);
-                renderMessage("OFFLINE. TRY AGAIN LATER.", 'bot');
+            // Only add greeting if the window is empty
+            if (chatMessages.children.length === 0) {
+                addBotMessage(OPENING_MESSAGE);
             }
-            isTyping = false;
+            
+            setTimeout(() => {
+                if (chatInput) chatInput.focus();
+            }, 300);
+        } else {
+            chatWindow.style.display = 'none';
+            chatWindow.classList.remove('open');
+            chatToggle.style.opacity = '1';
+            chatToggle.style.pointerEvents = 'all';
+        }
+    }
+
+    chatToggle.onclick = () => toggleChat(true);
+    document.getElementById('chat-close').onclick = () => toggleChat(false);
+    document.getElementById('open-chat-btn').onclick = () => toggleChat(true);
+
+    // 3. MESSAGE HANDLING
+    function addBotMessage(text) {
+        // Push to local array for AI context
+        if (messages.length > 0) {
+            messages.push({ role: 'assistant', content: text });
+        }
+        renderMessage(text, 'bot');
+    }
+
+async function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text || isTyping) return;
+
+    chatInput.value = '';
+    renderMessage(text, 'user');
+    messages.push({ role: 'user', content: text });
+    
+    isTyping = true;
+    showTyping(true);
+
+    // 1. DETECT MEETING INTENT
+    const bookingKeywords = ['book', 'meeting', 'schedule', 'session', 'appointment', 'meet'];
+    const isBookingIntent = bookingKeywords.some(word => text.toLowerCase().includes(word));
+
+    try {
+        let payload = { chatId: chatId, messages: messages };
+        
+        // If they want to meet, tell Vercel to fetch slots
+        if (isBookingIntent) {
+            payload.action = "FETCH_SLOTS";
         }
 
-        function renderMessage(text, type) {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await response.json();
+        showTyping(false);
+
+        // 2. THE FIX: HANDLE THE SLOTS ARRAY
+        if (data.slots && Array.isArray(data.slots)) {
+            let slotList = data.slots.map((s, i) => `${i + 1}. ${s}`).join('\n');
+            const botMsg = `I HAVE CHECKED THE CALENDAR. HERE ARE THE NEXT AVAILABLE SLOTS:\n\n${slotList}\n\nWHICH ONE WORKS FOR YOU? PLEASE TYPE THE NUMBER OR THE TIME.`;
+            
+            renderMessage(botMsg, 'bot');
+            messages.push({ role: 'assistant', content: botMsg });
+        } 
+        // 3. HANDLE STANDARD AI TEXT
+        else if (data.content && data.content[0]) {
+            const botMsg = data.content[0].text;
+            renderMessage(botMsg, 'bot');
+            messages.push({ role: 'assistant', content: botMsg });
+        }
+    } catch (e) {
+        showTyping(false);
+        console.error("Connection Error:", e);
+        renderMessage("CONNECTION INTERRUPTED. SYSTEM OFFLINE.", 'bot');
+    }
+    isTyping = false;
+}
+    
+   
+
+    // 4. UI RENDERING
+    function renderMessage(text, type) {
+        const el = document.createElement('div');
+        el.className = `msg msg-${type}`;
+        el.textContent = text;
+        chatMessages.appendChild(el);
+        scrollToBottom();
+    }
+
+    function scrollToBottom() {
+        chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
+    }
+
+    function showTyping(show) {
+        if (show) {
             const el = document.createElement('div');
-            el.className = `msg msg-${type}`;
-            el.textContent = text;
+            el.id = 'typing';
+            el.className = 'msg-typing';
+            el.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
             chatMessages.appendChild(el);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            scrollToBottom();
+        } else {
+            document.getElementById('typing')?.remove();
         }
+    }
 
-        function showTyping(show) {
-            if (show) {
-                const el = document.createElement('div');
-                el.id = 'typing';
-                el.className = 'msg-typing';
-                el.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
-                chatMessages.appendChild(el);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            } else {
-                document.getElementById('typing')?.remove();
-            }
-        }
+    // Keyboard Listeners
+    chatSend.onclick = sendMessage;
+    chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
 
-        chatSend.onclick = sendMessage;
-        chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
-    </script>
+</script>
+
+
 
 </body>
 </html>
