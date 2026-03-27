@@ -1,8 +1,8 @@
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send();
 
-    // The endpoint for your combined Google Apps Script
-    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyQKYvsGNaUazlhNhQILrDQhklx-J_evO3MOk0L83lskvX7UNsT_iz0jJakL2X3xvRTGw/exec';
+    // UPDATE THIS URL with your latest "Combined" Google Apps Script Deployment URL
+    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbz9WR9jlSnZXmngyh4D3cqcw85p0tSemw1OGVIPd9AutUIYXMFJa_SyMzdvg1abF4YYHw/exec';
 
     // 1. GENERATE TIMESTAMP (Australia/Sydney Time)
     const now = new Date();
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
         } catch (e) { console.error("Geo Error"); }
     }
 
-    // 3. THE FULL HEISCALE PERSONA
+    // 3. THE HEISCALE PERSONA (With Calendar Instructions)
     const HEISCALE_PERSONA = `
         You are Hei's Assistant, the AI representative for HEIScale.
         
@@ -39,33 +39,25 @@ export default async function handler(req, res) {
         - We are System Architects for the supply chain and industrial sectors.
         - We bridge the gap between "The Trench" (operations) and "The Tech" (innovation).
         - 20 years of experience in high-velocity logistics.
-
+        
         YOUR CORE MISSION:
         - Explain how we fix messy supply chains using the H-E-I Framework (Harmonize, Emerging, Innovation).
         - Tone: Professional, authoritative, yet uses "Plain English." No corporate fluff.     
         - Follow up with deep dive questions to understand the specific business challenges.
-
-        CALENDAR ACCESS:
-        - YOU HAVE DIRECT ACCESS TO HEI'S CALENDAR.
-        - Never say "I wish I could book it" or "Go to the website to book."
-        - YOU MUST HAVE the user name and email before you can start Google Calendar booking process.
-        - If the user wants to meet, tell them you are checking the live slots now.
-        - IF the user has intention to meet, ask the user if the user want to book a meeting.
-        - Once the system provides slots, present them clearly and help the user pick one.
         
         STRICT FORMATTING RULES:
-        - DO NOT use double asterisks (**) for bolding.
-        - DO NOT use dashes (-)
-        - DO NOT use em-dash (—)
-        - NO CHUNKY PARAGRAPHS. Max 2 sentences before a line break.
-        - Use plain English like a human expert texting.
-        - If you need to emphasize something, use CAPITAL LETTERS.
-        - Use simple line break to separate ideas.
-        - DO NOT be overly formal. Be direct.
-        - Ask for name and email after the first question politely.
-        - Do not give direct solutions immediately.
-        - Playback to validate understanding first.
-        - After four questions, gentally closing with playback with a problem statement, and advise following up. 
+        1. DO NOT use double asterisks (**) for bolding.
+        2. DO NOT use dashes (-)
+        3. DO NOT use em-dash (—)
+        4. Use plain English like a human expert texting.
+        5. If you need to emphasize something, use CAPITAL LETTERS.
+        6. Use simple line break to separate ideas.
+        7. NO CHUNKY PARAGRAPHS. Max 2 sentences before a line break.
+        8. DO NOT be overly formal. Be direct.
+        9. Ask for name and email after the first question politely.
+        10. Do not give drect solition.
+        11. Playback and to adjust and validate understanding.
+        12. After four questions, gentally closing with playback with a problem statement, and advise following up. 
         
         Context: User is in ${locationDisplay}, ${country}.
     `;
@@ -75,25 +67,32 @@ export default async function handler(req, res) {
 
         // --- CALENDAR ACTION HANDLERS ---
         
-        // Action: Fetch Available Slots
+        // Handle Request for Slots
         if (action === "FETCH_SLOTS") {
-            const r = await fetch(GOOGLE_URL, { method: 'POST', body: JSON.stringify({ action: "GET_SLOTS" }) });
-            return res.status(200).json(await r.json());
+            const slotRes = await fetch(GOOGLE_SHEET_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: "GET_SLOTS" })
+            });
+            const slotData = await slotRes.json();
+            return res.status(200).json(slotData);
         }
 
-        // Action: Confirm Final Booking
-        if (action === "BOOK_MEETING") {
-            const r = await fetch(GOOGLE_URL, { 
-                method: 'POST', 
+        // Handle Final Booking
+        if (action === "CREATE_BOOKING") {
+            const bookRes = await fetch(GOOGLE_SHEET_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    action: "BOOK_MEETING", 
-                    startTime: bookingData.startTime, // Match GAS Key
-                    email: bookingData.email, 
-                    summary: bookingData.summary 
-                }) 
+                    action: "BOOK_MEETING",
+                    startTime: bookingData.time,
+                    email: bookingData.email,
+                    summary: bookingData.summary
+                })
             });
-            return res.status(200).json({ status: await r.text() });
-        }    
+            const result = await bookRes.text();
+            return res.status(200).json({ status: result });
+        }
 
         // --- STANDARD CHAT LOGIC ---
         const lastUserMessage = messages[messages.length - 1].content;
@@ -116,7 +115,7 @@ export default async function handler(req, res) {
         const data = await aiResponse.json();
         const aiReply = data.content?.[0]?.text || "NO RESPONSE CONTENT";
 
-        // 4. LOG FULL PACKAGE TO GOOGLE SHEETS
+        // LOG TO GOOGLE SHEETS
         try {
             await fetch(GOOGLE_SHEET_URL, {
                 method: 'POST',
