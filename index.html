@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HEIScale | Harmonized Emerging Innovation</title>
     <script src="https://cdn.tailwindcss.com"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; margin: 0; }
@@ -13,13 +14,19 @@
         .btn-premium:hover { background: #fff; color: #000; }
 
         #chat-widget { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+        
+        /* FIX: Changed display: none to a class-based toggle */
         #chat-window { 
             width: 380px; max-width: calc(100vw - 48px); height: 520px; 
             background: #0a0a0a; border: 1px solid rgba(0,255,251,0.3); 
-            border-radius: 16px; display: none; flex-direction: column; 
+            border-radius: 16px; display: none; /* Keep this */
+            flex-direction: column; 
             overflow: hidden; box-shadow: 0 0 40px rgba(0,255,251,0.15); 
         }
-        #chat-window.open { display: flex; }
+
+        /* FIX: Forced display flex with !important to override the ID style */
+        #chat-window.open { display: flex !important; }
+
         #chat-header { padding: 16px 20px; background: #0f0f0f; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; }
         .chat-avatar { width: 36px; height: 36px; background: #00fffb; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #000; }
         #chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; white-space: pre-wrap; }
@@ -31,14 +38,14 @@
         #chat-input-area { padding: 16px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; gap: 8px; background: #0f0f0f; }
         #chat-input { flex: 1; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; color: #fff; outline: none; }
         #chat-send { width: 42px; height: 42px; background: #00fffb; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; }
-        #chat-toggle { width: 56px; height: 56px; background: #00fffb; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 24px rgba(0,255,251,0.4); border: none; }
+        #chat-toggle { width: 56px; height: 56px; background: #00fffb; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 24px rgba(0,255,251,0.4); border: none; transition: transform 0.2s; }
+        #chat-toggle:active { transform: scale(0.9); }
 
         .msg-typing { display: flex; gap: 4px; padding: 12px 16px; background: #1a1a1a; border-radius: 12px; align-self: flex-start; }
         .dot { width: 6px; height: 6px; background: rgba(0,255,251,0.6); border-radius: 50%; animation: bounce 1.2s infinite; }
-        .dot:nth-child(2) { animation-delay: 0.2s; }
-        .dot:nth-child(3) { animation-delay: 0.4s; }
         @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
     </style>
+    
 </head>
 <body>
 
@@ -75,141 +82,133 @@
 </div>
 
 <script>
-    const OPENING_MESSAGE = "Hi! I'm Hei's Assistant. What's the biggest challenge in your business operations right now?";
-    const chatId = 'HEI-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-    
-    let messages = [];
-    let isTyping = false;
-    let currentSlots = []; 
-    let selectedTime = null; // Stores ISO string
-    let userEmail = "";
-
-    const chatWindow = document.getElementById('chat-window');
-    const chatMessages = document.getElementById('chat-messages');
-    const chatInput = document.getElementById('chat-input');
-    const chatSend = document.getElementById('chat-send');
-    const chatToggle = document.getElementById('chat-toggle');
-
-    function toggleChat(show) {
-        if (show) {
-            chatWindow.style.display = 'flex'; 
-            chatWindow.classList.add('open');
-            chatToggle.style.opacity = '0';
-            if (chatMessages.children.length === 0) {
-                renderMessage(OPENING_MESSAGE, 'bot');
-                messages.push({ role: 'assistant', content: OPENING_MESSAGE });
-            }
-            setTimeout(() => chatInput.focus(), 300);
-        } else {
-            chatWindow.style.display = 'none';
-            chatToggle.style.opacity = '1';
-        }
-    }
-
-    async function sendMessage() {
-        const text = chatInput.value.trim();
-        if (!text || isTyping) return;
-
-        chatInput.value = '';
-        renderMessage(text, 'user');
-        messages.push({ role: 'user', content: text });
+        const OPENING_MESSAGE = "Hi! I'm Hei's Assistant. What's the biggest challenge in your business operations right now?";
+        const chatId = 'HEI-' + Math.random().toString(36).substring(2, 6).toUpperCase();
         
-        isTyping = true;
-        showTyping(true);
+        let messages = [];
+        let isTyping = false;
+        let currentSlots = []; 
+        let selectedTime = null;
+        let userEmail = "";
 
-        // 1. Capture Email
-        const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]{2,}/);
-        if (emailMatch) userEmail = emailMatch[0];
+        const chatWindow = document.getElementById('chat-window');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const chatSend = document.getElementById('chat-send');
+        const chatToggle = document.getElementById('chat-toggle');
+        const openChatBtn = document.getElementById('open-chat-btn');
 
-        try {
-            let payload = { chatId, messages };
-
-            // 2. Logic: Handle Slot Selection (typing "1", "2", etc)
-            const slotIdx = parseInt(text) - 1;
-            if (!isNaN(slotIdx) && currentSlots[slotIdx]) {
-                selectedTime = currentSlots[slotIdx].value; 
-                if (!userEmail) {
-                    const askEmail = "EXCELLENT. I HAVE LOCKED IN " + currentSlots[slotIdx].label.toUpperCase() + ". \n\nWHAT IS YOUR EMAIL ADDRESS SO I CAN DISPATCH THE INVITE?";
-                    showTyping(false);
-                    renderMessage(askEmail, 'bot');
-                    messages.push({ role: 'assistant', content: askEmail });
-                    isTyping = false;
-                    return; 
+        function toggleChat(show) {
+            console.log("Toggle Chat:", show); // Debug line
+            if (show) {
+                chatWindow.classList.add('open');
+                chatToggle.style.display = 'none'; // Hide toggle when open
+                if (chatMessages.children.length === 0) {
+                    renderMessage(OPENING_MESSAGE, 'bot');
+                    messages.push({ role: 'assistant', content: OPENING_MESSAGE });
                 }
+                setTimeout(() => chatInput.focus(), 300);
+            } else {
+                chatWindow.classList.remove('open');
+                chatToggle.style.display = 'flex'; // Show toggle when closed
             }
-
-            // 3. Logic: Finalize Booking
-            if (selectedTime && userEmail) {
-                payload.action = "BOOK_MEETING";
-                payload.bookingData = { 
-                    startTime: selectedTime, 
-                    email: userEmail, 
-                    summary: messages[0].content 
-                };
-            } 
-            // 4. Logic: Fetch Slots if user wants to meet
-            else if (['meet', 'book', 'schedule', 'appointment', 'calendar'].some(w => text.toLowerCase().includes(w))) {
-                payload.action = "FETCH_SLOTS";
-            }
-
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            const data = await response.json();
-            showTyping(false);
-
-            if (data.slots) {
-                currentSlots = data.slots;
-                let slotList = data.slots.map((s, i) => `${i + 1}. ${s.label}`).join('\n');
-                const botMsg = `I'VE CHECKED THE CALENDAR. WHICH ONE WORKS?\n\n${slotList}\n\nTYPE THE NUMBER TO LOCK IT IN.`;
-                renderMessage(botMsg, 'bot');
-                messages.push({ role: 'assistant', content: botMsg });
-            } else if (payload.action === "BOOK_MEETING") {
-                const successMsg = "CONFIRMED. THE HEISCALE INVITE IS ON ITS WAY TO " + userEmail.toUpperCase() + ". \n\nSEE YOU THEN.";
-                renderMessage(successMsg, 'bot');
-                selectedTime = null; // Clear state
-            } else if (data.content && data.content[0]) {
-                const aiText = data.content[0].text;
-                renderMessage(aiText, 'bot');
-                messages.push({ role: 'assistant', content: aiText });
-            }
-        } catch (e) {
-            showTyping(false);
-            renderMessage("CONNECTION INTERRUPTED. PLEASE TRY AGAIN.", 'bot');
         }
-        isTyping = false;
-    }
 
-    function renderMessage(text, type) {
-        const el = document.createElement('div');
-        el.className = `msg msg-${type}`;
-        el.textContent = text;
-        chatMessages.appendChild(el);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
+        // Event Listeners
+        chatToggle.addEventListener('click', () => toggleChat(true));
+        document.getElementById('chat-close').addEventListener('click', () => toggleChat(false));
+        if(openChatBtn) openChatBtn.addEventListener('click', () => toggleChat(true));
 
-    function showTyping(show) {
-        if (show) {
+        async function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text || isTyping) return;
+
+            chatInput.value = '';
+            renderMessage(text, 'user');
+            messages.push({ role: 'user', content: text });
+            
+            isTyping = true;
+            showTyping(true);
+
+            const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]{2,}/);
+            if (emailMatch) userEmail = emailMatch[0];
+
+            try {
+                let payload = { chatId, messages };
+                const slotIdx = parseInt(text) - 1;
+
+                if (!isNaN(slotIdx) && currentSlots[slotIdx]) {
+                    selectedTime = currentSlots[slotIdx].value; 
+                    if (!userEmail) {
+                        const askEmail = "EXCELLENT. I HAVE LOCKED IN " + currentSlots[slotIdx].label.toUpperCase() + ". \n\nPLEASE PROVIDE YOUR EMAIL TO RECEIVE THE INVITE.";
+                        showTyping(false);
+                        renderMessage(askEmail, 'bot');
+                        messages.push({ role: 'assistant', content: askEmail });
+                        isTyping = false;
+                        return; 
+                    }
+                }
+
+                if (selectedTime && userEmail) {
+                    payload.action = "BOOK_MEETING";
+                    payload.bookingData = { startTime: selectedTime, email: userEmail, summary: messages[0].content };
+                } else if (['meet', 'book', 'schedule', 'appointment'].some(w => text.toLowerCase().includes(w))) {
+                    payload.action = "FETCH_SLOTS";
+                }
+
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                showTyping(false);
+
+                if (data.slots) {
+                    currentSlots = data.slots;
+                    let slotList = data.slots.map((s, i) => `${i + 1}. ${s.label}`).join('\n');
+                    const botMsg = `I'VE CHECKED THE CALENDAR. WHICH WORKS BEST?\n\n${slotList}\n\nREPLY WITH THE NUMBER.`;
+                    renderMessage(botMsg, 'bot');
+                    messages.push({ role: 'assistant', content: botMsg });
+                } else if (payload.action === "BOOK_MEETING") {
+                    renderMessage("DONE. THE INVITE IS ON ITS WAY TO " + userEmail.toUpperCase() + ".", 'bot');
+                    selectedTime = null;
+                } else if (data.content) {
+                    renderMessage(data.content[0].text, 'bot');
+                    messages.push({ role: 'assistant', content: data.content[0].text });
+                }
+            } catch (e) {
+                showTyping(false);
+                renderMessage("OFFLINE. TRY AGAIN LATER.", 'bot');
+            }
+            isTyping = false;
+        }
+
+        function renderMessage(text, type) {
             const el = document.createElement('div');
-            el.id = 'typing';
-            el.className = 'msg-typing';
-            el.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+            el.className = `msg msg-${type}`;
+            el.textContent = text;
             chatMessages.appendChild(el);
             chatMessages.scrollTop = chatMessages.scrollHeight;
-        } else {
-            document.getElementById('typing')?.remove();
         }
-    }
 
-    chatToggle.onclick = () => toggleChat(true);
-    document.getElementById('chat-close').onclick = () => toggleChat(false);
-    document.getElementById('open-chat-btn').onclick = () => toggleChat(true);
-    chatSend.onclick = sendMessage;
-    chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
-</script>
+        function showTyping(show) {
+            if (show) {
+                const el = document.createElement('div');
+                el.id = 'typing';
+                el.className = 'msg-typing';
+                el.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+                chatMessages.appendChild(el);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            } else {
+                document.getElementById('typing')?.remove();
+            }
+        }
+
+        chatSend.onclick = sendMessage;
+        chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
+    </script>
 
 </body>
 </html>
