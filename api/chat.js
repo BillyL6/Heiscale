@@ -48,6 +48,7 @@ export default async function handler(req, res) {
         CALENDAR ACCESS:
         - YOU HAVE DIRECT ACCESS TO HEI'S CALENDAR.
         - Never say "I wish I could book it" or "Go to the website to book."
+        - YOU MUST HAVE the user name and email before you can start Google Calendar booking process.
         - If the user wants to meet, tell them you are checking the live slots now.
         - IF the user has intention to meet, ask the user if the user want to book a meeting.
         - Once the system provides slots, present them clearly and help the user pick one.
