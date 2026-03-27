@@ -333,45 +333,61 @@
         renderMessage(text, 'bot');
     }
 
-    async function sendMessage() {
-        const text = chatInput.value.trim();
-        if (!text || isTyping) return;
+async function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text || isTyping) return;
 
-        chatInput.value = '';
-        renderMessage(text, 'user');
+    chatInput.value = '';
+    renderMessage(text, 'user');
+    messages.push({ role: 'user', content: text });
+    
+    isTyping = true;
+    showTyping(true);
+
+    // 1. DETECT MEETING INTENT
+    const bookingKeywords = ['book', 'meeting', 'schedule', 'session', 'appointment', 'meet'];
+    const isBookingIntent = bookingKeywords.some(word => text.toLowerCase().includes(word));
+
+    try {
+        let payload = { chatId: chatId, messages: messages };
         
-        // Push user message to history
-        messages.push({ role: 'user', content: text });
-        
-        isTyping = true;
-        showTyping(true);
-
-        try {
-            // Send the Chat ID along with the messages
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chatId: chatId, // New ID Tracking
-                    messages: messages
-                })
-            });
-            
-            const data = await response.json();
-            showTyping(false);
-
-            if (data.content && data.content[0]) {
-                const botMsg = data.content[0].text;
-                renderMessage(botMsg, 'bot');
-                messages.push({ role: 'assistant', content: botMsg });
-            }
-        } catch (e) {
-            showTyping(false);
-            console.error("Connection Error:", e);
-            renderMessage("RECEPTION INTERRUPTED. PLEASE CHECK CONNECTION.", 'bot');
+        // If they want to meet, tell Vercel to fetch slots
+        if (isBookingIntent) {
+            payload.action = "FETCH_SLOTS";
         }
-        isTyping = false;
+
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await response.json();
+        showTyping(false);
+
+        // 2. THE FIX: HANDLE THE SLOTS ARRAY
+        if (data.slots && Array.isArray(data.slots)) {
+            let slotList = data.slots.map((s, i) => `${i + 1}. ${s}`).join('\n');
+            const botMsg = `I HAVE CHECKED THE CALENDAR. HERE ARE THE NEXT AVAILABLE SLOTS:\n\n${slotList}\n\nWHICH ONE WORKS FOR YOU? PLEASE TYPE THE NUMBER OR THE TIME.`;
+            
+            renderMessage(botMsg, 'bot');
+            messages.push({ role: 'assistant', content: botMsg });
+        } 
+        // 3. HANDLE STANDARD AI TEXT
+        else if (data.content && data.content[0]) {
+            const botMsg = data.content[0].text;
+            renderMessage(botMsg, 'bot');
+            messages.push({ role: 'assistant', content: botMsg });
+        }
+    } catch (e) {
+        showTyping(false);
+        console.error("Connection Error:", e);
+        renderMessage("CONNECTION INTERRUPTED. SYSTEM OFFLINE.", 'bot');
     }
+    isTyping = false;
+}
+    
+   
 
     // 4. UI RENDERING
     function renderMessage(text, type) {
