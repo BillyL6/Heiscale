@@ -111,9 +111,16 @@
         }
 
         /* FIX: Hardcoded font-size 16px to prevent zoom during typing 20260328_2150 */
+        /* FIX 1: Explicitly force Black background and White text for iOS chenaged to 20260328_2215 */
         // #chat-input { flex: 1; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; color: #fff; outline: none; font-size: 14px; }  // chenaged from 20260328_2150
-        #chat-input { flex: 1; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; color: #fff; outline: none; font-size: 16px; }  // chenaged to 20260328_2150
+        // #chat-input { flex: 1; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; color: #fff; outline: none; font-size: 16px; }  // chenaged to 20260328_2150
+        #chat-input { flex: 1; background-color: #1a1a1a !important; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; color: #ffffff !important; outline: none; font-size: 16px; -webkit-appearance: none; } // chenaged to 20260328_2215
 
+        /* FIX 2: Mobile Responsive Logic - Makes Chat Full Screen on iPhone Add 20260328_2215*/
+        @media (max-width: 480px) {
+            #chat-window { width: 100vw !important; height: 100vh !important; max-width: none !important; position: fixed; top: 0; left: 0; right: 0; bottom: 0; border-radius: 0; }
+            #chat-widget { bottom: 0; right: 0; }
+        }
         
         #chat-send { 
             width: 42px; 
