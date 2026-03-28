@@ -285,7 +285,10 @@
     const OPENING_MESSAGE = "Hi! I'm Hei's Assistant. What's the biggest challenge in your business operations right now?";
 
     // Generate a unique Chat ID for this session (e.g., HEI-A7B2)
-    const chatId = 'hei' + Math.random().toString(36).substring(2, 6).toLowerCase();
+    //const chatId = 'hei' + Math.random().toString(36).substring(2, 6).toLowerCase();
+    const chars = '23456789abcdefghijkmnopqrstuvwxyz'; // Notice '0' and 'l' are removed for clarity
+    const randomSuffix = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const chatId = 'hei' + randomSuffix;
     
     let messages = [];
     let isTyping = false;
