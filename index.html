@@ -3,12 +3,19 @@
 <head>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect x=%220%22 y=%220%22 width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%2300ced1%22 /><path d=%22M30 50 L70 30 L60 70 L50 60 L30 50 Z M50 60 L70 30%22 fill=%22none%22 stroke=%22white%22 stroke-width=%225%22 stroke-linejoin=%22round%22 /></svg>">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    //<meta name="viewport" content="width=device-width, initial-scale=1.0"> // chenaged from 20260328_2150
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> // changed to deleted 20260328_2150
+    
     <title>HEIScale | Harmonized Emerging Innovation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; margin: 0; }
+
+        /* FIX: Force 16px font on all inputs to bypass iOS zoom trigger 20260328_2150 */
+        input, textarea { font-size: 16px !important; touch-action: manipulation; }   // added 20260328_2150
+        
         .accent-purple { color: #a100ff; }
         .electric-cyan { color: #00fffb; }
         .btn-premium { border: 1px solid #fff; transition: all 0.3s; cursor: pointer; }
@@ -103,17 +110,11 @@
             background: #0f0f0f; 
         }
 
-        #chat-input { 
-            flex: 1; 
-            background: #1a1a1a; 
-            border: 1px solid rgba(255,255,255,0.1); 
-            border-radius: 8px; 
-            padding: 10px 14px; 
-            color: #fff; 
-            outline: none; 
-            font-size: 14px;
-        }
+        /* FIX: Hardcoded font-size 16px to prevent zoom during typing 20260328_2150 */
+        // #chat-input { flex: 1; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; color: #fff; outline: none; font-size: 14px; }  // chenaged from 20260328_2150
+        #chat-input { flex: 1; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; color: #fff; outline: none; font-size: 16px; }  // chenaged to 20260328_2150
 
+        
         #chat-send { 
             width: 42px; 
             height: 42px; 
@@ -341,6 +342,9 @@
         const text = chatInput.value.trim();
         if (!text || isTyping) return;
 
+        // DISMISS KEYBOARD: Force blur to hide the iPhone keyboard immediately 20260328_2150
+        chatInput.blur();        // Add 20260328_2150
+
         chatInput.value = '';
         renderMessage(text, 'user');
         
@@ -405,8 +409,18 @@
 
     // Keyboard Listeners
     chatSend.onclick = sendMessage;
-    chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
+    
 
+    // KEYBOARD LISTENER: Updated to prevent default new-line behavior
+    // chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); }; // change from 20260328_2150
+    chatInput.addEventListener('keypress', (e) => {   // change to 20260328_2150
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            sendMessage(); 
+        }
+    });
+
+    
 </script>
 
 
