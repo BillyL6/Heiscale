@@ -106,6 +106,7 @@
             padding: 16px; 
             border-top: 1px solid rgba(255,255,255,0.08); 
             display: flex; 
+            align-items: center; /* ADD 20260328_2230: Keeps button centered to the right */
             gap: 8px; 
             background: #0f0f0f; 
         }
@@ -114,7 +115,18 @@
         /* FIX 1: Explicitly force Black background and White text for iOS chenaged to 20260328_2215 */
         // #chat-input { flex: 1; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; color: #fff; outline: none; font-size: 14px; }  // chenaged from 20260328_2150
         // #chat-input { flex: 1; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; color: #fff; outline: none; font-size: 16px; }  // chenaged to 20260328_2150
-        #chat-input { flex: 1; background-color: #1a1a1a !important; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; color: #ffffff !important; outline: none; font-size: 16px; -webkit-appearance: none; } // chenaged to 20260328_2215
+        #chat-input { 
+            flex: 1; 
+            background-color: #1a1a1a !important; /* CHANGE: Forced dark background */
+            border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 8px; 
+            padding: 10px 14px; 
+            color: #ffffff !important; /* CHANGE: Forced white text visibility */
+            outline: none; 
+            font-size: 16px !important; 
+            -webkit-appearance: none; 
+            box-shadow: none;
+        } // chenaged to 20260328_2215
 
         /* FIX 2: Mobile Responsive Logic - Makes Chat Full Screen on iPhone Add 20260328_2215*/
         @media (max-width: 480px) {
@@ -128,6 +140,7 @@
             background: #00ccc9; 
             border-radius: 8px; 
             display: flex; 
+            flex-shrink: 0; /* ADD 20260328_2230: Prevents button from squishing on mobile */
             align-items: center; 
             justify-content: center; 
             cursor: pointer; 
